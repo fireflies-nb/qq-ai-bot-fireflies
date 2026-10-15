@@ -1,0 +1,23 @@
+# 行尾统一策略。
+#
+# 顺序很重要：gitattributes 里**后面的规则覆盖前面的**，
+# 所以"默认"必须写在最前面，特例写在后面。
+# （最初把 `* text=auto` 写在末尾，结果是它反过来覆盖了 `*.js text eol=lf`，
+#   在 Windows 上检出成 CRLF，和"跨平台一致"的初衷正好相反。）
+
+# 默认：一律 LF，任何平台检出都一样
+* text=auto eol=lf
+
+# .bat 必须是 CRLF。
+# 实测过 —— 在 `chcp 65001` 的中文批处理里，UTF-8 + LF-only 会让 cmd.exe
+# 把中文字节与行边界错位，报 "'Q' is not recognized as an internal or external command"
+# 之类的错。这不是缓冲区问题，就是换行符问题。
+*.bat text eol=crlf
+
+# 二进制文件不要碰
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.db   binary

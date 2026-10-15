@@ -1,0 +1,21 @@
+{
+  "name": "qq-ai-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "QQ 群聊 @ 自动回复机器人（OneBot 11 + DeepSeek），零依赖",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\"",
+    "smoke": "node --disable-warning=ExperimentalWarning scripts/smoke.mjs",
+    "backup": "node --disable-warning=ExperimentalWarning scripts/backup.mjs",
+    "dedupe": "node --disable-warning=ExperimentalWarning scripts/dedupe-memories.mjs",
+    "persona:compare": "node --disable-warning=ExperimentalWarning scripts/persona-compare.mjs",
+    "style:compare": "node --disable-warning=ExperimentalWarning scripts/style-compare.mjs",
+    "check": "node --check src/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

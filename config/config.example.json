@@ -1,0 +1,148 @@
+{
+  "onebot": {
+    "wsUrl": "ws://127.0.0.1:3001",
+    "accessToken": "",
+    "reconnectMinMs": 1000,
+    "reconnectMaxMs": 30000,
+    "apiTimeoutMs": 15000
+  },
+  "llm": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "apiKey": "在这里填你的 DeepSeek API Key",
+    "model": "deepseek-chat",
+    "temperature": 1.1,
+    "maxTokens": 800,
+    "timeoutMs": 45000
+  },
+  "trigger": {
+    "group": {
+      "enabled": true,
+      "requireAt": true,
+      "whitelist": [],
+      "blacklist": []
+    },
+    "private": {
+      "enabled": false,
+      "whitelist": []
+    }
+  },
+  "context": {
+    "groupWindow": 20,
+    "privateWindow": 20,
+    "groupTurns": 20,
+    "privateTurns": 10,
+    "maxChars": 1500
+  },
+  "rateLimit": {
+    "perSessionMinIntervalMs": 3000,
+    "globalPerMinute": 20,
+    "dedupeTtlMs": 300000
+  },
+  "quietHours": {
+    "enabled": false,
+    "start": "23:30",
+    "end": "07:30"
+  },
+  "split": {
+    "enabled": true,
+    "maxLength": 90,
+    "maxSegments": 3,
+    "privateMaxLength": 45,
+    "privateMaxSegments": 5,
+    "delayMinMs": 300,
+    "delayMaxMs": 800,
+    "bubbleOnNewline": true
+  },
+  "typing": {
+    "enabled": true,
+    "reactMinMs": 600,
+    "reactMaxMs": 1600,
+    "perCharMs": 45,
+    "maxDelayMs": 4000
+  },
+  "inputStatus": {
+    "enabled": true,
+    "minDelayMs": 800
+  },
+  "owner": {
+    "qq": "在这里填你自己的大号 QQ 号（唯一被当作开拓者的号）"
+  },
+  "persona": {
+    "systemPromptFile": "./config/persona.md",
+    "description": "你是这个 QQ 号的主人本人。你在群里聊天，说话随意、简短、口语化，像真人在手机上打字。",
+    "style": "每次回 1 句话为主，最多 2 句。不用标点堆砌，不用书面语，不用 emoji 堆叠。",
+    "rules": [
+      "绝对不要暴露你是 AI、机器人、模型或助手，也不要说\"作为AI\"之类的话。",
+      "不要输出括号动作描写，不要用\"哈哈\"以外的过度客套。",
+      "不确定的事情就用模糊的话带过，不要编造具体事实骗人。",
+      "别人问你是不是机器人，就自然地否认或反问回去。",
+      "涉及转账、账号密码、验证码、身份证、银行卡的，一律不回应细节，只说\"这个不方便说\"。",
+      "不要主动索要任何人的隐私信息。",
+      "如果对方在问你解决不了的事情，就说\"我看看\"、\"待会儿回你\"这类话。"
+    ],
+    "fallback": "嗯……让我想想。"
+  },
+  "awareness": {
+    "enabled": true,
+    "timezone": "Asia/Shanghai",
+    "gap": true,
+    "location": {
+      "name": "在这里填你所在的城市名，比如 杭州",
+      "latitude": 30.2741,
+      "longitude": 120.1551
+    },
+    "weather": {
+      "enabled": true,
+      "refreshMs": 1800000,
+      "timeoutMs": 8000,
+      "retryOnFailMs": 120000
+    }
+  },
+  "memory": {
+    "enabled": true,
+    "recall": true,
+    "extract": true,
+    "recallLimit": 6,
+    "minScore": 2,
+    "maxPerCall": 5,
+    "maxPerSession": 500,
+    "maxInputChars": 1200,
+    "maxTextLength": 120,
+    "maxTokens": 500,
+    "maxQueryGrams": 24,
+    "dedupeExtract": true,
+    "dedupeKnownLimit": 40,
+    "dedupeOnWrite": true,
+    "dedupeOnRetrieve": true
+  },
+  "selfMemory": {
+    "enabled": true,
+    "turns": 8,
+    "limit": 8,
+    "maxChars": 400,
+    "maxItemChars": 60
+  },
+  "vision": {
+    "enabled": true,
+    "maxImages": 2,
+    "maxBytes": 5242880,
+    "timeoutMs": 10000,
+    "cacheTtlMs": 600000,
+    "cacheMax": 16
+  },
+  "safety": {
+    "blockedKeywords": ["转账", "打钱", "验证码", "密码", "银行卡", "身份证", "贷款", "借钱"],
+    "blockedReply": "这个真不方便说",
+    "takeoverAfterSelfMessageMs": 600000
+  },
+  "control": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "storage": {
+    "dbPath": "./data/bot.db",
+    "retentionDays": 30
+  },
+  "logLevel": "info"
+}

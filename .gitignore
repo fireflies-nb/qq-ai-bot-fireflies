@@ -1,0 +1,15 @@
+node_modules/
+data/
+config/config.json
+config/persona.md
+*.log
+
+# 临时探测脚本（_probe_*.mjs / _check_*.mjs 是开发时的一次性验证脚本，不该进仓库）
+_probe*.mjs
+_check*.mjs
+*.db
+*.db-wal
+*.db-shm
+
+# 本地旧 git 历史的备份（若存在）
+.git-local-backup/
