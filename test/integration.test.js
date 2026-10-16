@@ -1061,8 +1061,11 @@ test('llm：称呼示范可以关掉，也支持换别的称呼', () => {
   assert.equal(buildAddressDemo([]), '');
   assert.equal(buildAddressDemo(''), '');
 
-  const custom = buildAddressDemo(['阿澈', '萤宝']);
-  assert.ok(custom.includes('阿澈，回来啦'));
+  // 这里只是验证"多个称呼都会出现在示范里"，用的必须是**虚构名**：
+  // 别拿任何真实昵称当测试夹具 —— 真实 API 实测模型会把示范里的字符串逐字照抄，
+  // 而人设范例里出现的名字是最容易被抄走的（见 ROADMAP 坑 18）。
+  const custom = buildAddressDemo(['小明', '萤宝']);
+  assert.ok(custom.includes('小明，回来啦'));
   assert.ok(custom.includes('萤宝，回来啦'), '第二个称呼也要出现在示范里');
 });
 
