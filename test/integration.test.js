@@ -13,7 +13,7 @@ const { Store } = await import('../src/store.js');
 const { OneBot } = await import('../src/onebot.js');
 const { Bot, cleanReply, typingDelayMs } = await import('../src/bot.js');
 const { createControlServer } = await import('../src/control.js');
-const { buildMessages, buildSystemPrompt, chatCompletion, isOwner, tidySelfText } = await import('../src/llm.js');
+const { buildAddressDemo, buildMessages, buildSystemPrompt, chatCompletion, isOwner, tidySelfText } = await import('../src/llm.js');
 const { Awareness } = await import('../src/awareness.js');
 const { MemoryManager } = await import('../src/memory.js');
 const { ImageFetcher } = await import('../src/vision.js');
@@ -1020,6 +1020,53 @@ test('llm：私聊开拓者更亲近但不放开长度，私聊陌生人要守�
 });
 
 // ---------------------------------------------------------------------------
+// 说话习惯示范（称呼）
+// 背景：人设文件里早就写了"不用每句都叫，但也不要一直躲着不叫"，但真机历史回放
+// 实测称呼 0/50。换成一小段**具体示范**后 0/20 → 6/20（"他要去睡"那一档 4/5）。
+// ---------------------------------------------------------------------------
+
+test('llm：称呼示范只给私聊开拓者，且必须排在动态内容之前（前缀缓存）', () => {
+  const cfg = makeCfg({ owner: { qq: '2000000001' } });
+  const ownerP = buildSystemPrompt(cfg, { isGroup: false, isOwner: true });
+  assert.ok(ownerP.includes('你平时是怎么叫他的'), '私聊开拓者应有称呼示范');
+  assert.ok(ownerP.includes('开拓者，回来啦'), '示范要给出具体句子，不是抽象规则');
+  assert.ok(ownerP.includes('不要每轮都叫'), '要防止退化成每句都喊名字');
+
+  // 位置：示范必须在动态内容之前（实测 6/20 vs 放在末尾 3/20）
+  const demoAt = ownerP.indexOf('你平时是怎么叫他的');
+  const envAt = ownerP.indexOf('你此刻的感知');
+  const dyn = buildSystemPrompt(cfg, {
+    isGroup: false,
+    isOwner: true,
+    environment: ['现在是 2026年10月16日 星期五 深夜 23:47（晴）'],
+    memories: '- 开拓者最近在学吉他（近况）',
+  });
+  assert.ok(dyn.indexOf('开拓者最近在学吉他') > dyn.indexOf('你平时是怎么叫他的'), '记忆要在示范之后');
+  // 不带动态内容时示范仍要存在（说明它属于稳定前缀，可被缓存）
+  assert.ok(envAt === -1 || envAt > demoAt);
+
+  // 群聊 / 陌生人：绝不能出现（那边人设明确禁止叫"开拓者"）
+  const groupOwner = buildSystemPrompt(cfg, { isGroup: true, groupId: '555', isOwner: true });
+  assert.ok(!groupOwner.includes('你平时是怎么叫他的'), '群里不能注入称呼示范');
+  const stranger = buildSystemPrompt(cfg, { isGroup: false, isOwner: false });
+  assert.ok(!stranger.includes('你平时是怎么叫他的'), '陌生人不能注入称呼示范');
+});
+
+test('llm：称呼示范可以关掉，也支持换别的称呼', () => {
+  const off = buildSystemPrompt(makeCfg({ owner: { qq: '2000000001' }, persona: { addressNames: [] } }), {
+    isGroup: false,
+    isOwner: true,
+  });
+  assert.ok(!off.includes('你平时是怎么叫他的'), '空数组 = 关掉示范');
+  assert.equal(buildAddressDemo([]), '');
+  assert.equal(buildAddressDemo(''), '');
+
+  const custom = buildAddressDemo(['阿澈', '萤宝']);
+  assert.ok(custom.includes('阿澈，回来啦'));
+  assert.ok(custom.includes('萤宝，回来啦'), '第二个称呼也要出现在示范里');
+});
+
+// ---------------------------------------------------------------------------
 // 短期自身话记忆（selfMemory）+ 历史按「轮」取（context.*Turns）
 // 背景：实测私聊最近 20 行里她自己占 13 行（65%），窗口边界常落在一轮中间，
 // 开头那半条助手消息会被 buildMessages 丢掉；而她的多气泡被合并成一条 assistant，
@@ -1097,6 +1144,12 @@ test('llm：注入"你方才自己说过的话"并明确要求不要重复说', 
   assert.ok(withSelf.includes('记得吃饭哦'));
   assert.ok(withSelf.includes('同一件事不要重复说'), '必须点明"别再说一遍"');
   assert.ok(withSelf.includes('不要念出来'), '提醒不能被当成台词复述');
+  // 这条是实测逼出来的：她即兴编了一句"把手账本上那张翻出来"，此后每轮这句话都出现在
+  // 上面这个清单里，她当成"我说过所以是真的"，再往下补细节。清单不加这句就是在给她背书。
+  assert.ok(
+    withSelf.includes('不代表它们就是真的发生过'),
+    '自身话清单必须声明"说过 ≠ 真的发生过"，否则幻觉会被清单背书',
+  );
 
   // 没传 / 传空数组时，结构与从前完全一致（不能凭空多出一段）。
   const none = buildSystemPrompt(cfg, { isGroup: false });

@@ -65,6 +65,49 @@ export function isOwner(cfg, senderId) {
 }
 
 /**
+ * 「说话习惯示范」——教她怎么称呼号主。
+ *
+ * 【为什么需要这个函数（真实 API 实测，别凭直觉改）】
+ * 人设文件第 49-61 行早就写明了称呼规则："不用每句都叫，但也不要一直躲着不叫"。
+ * 但用真机历史回放（31 行真实上下文、10 轮）实测，**称呼出现率是 0/50** ——
+ * 抽象的行为规则对"叫不叫名字"这类口头习惯基本无效，模型会一路用"你"。
+ *
+ * 试过并且**无效**的旋钮（都别再做一遍）：
+ *   - 把规则写得更强硬、更靠前 → 0/50 不变
+ *   - 在「你记得关于对方的事」里放一条"他叫阿澈" → 无效
+ *   - 把 selfMemory 的 turns 调大 → 无效
+ *   - 示范放在动态内容之后（最靠近当前回合）→ 3/20，反而**比放在前面差**
+ *
+ * **唯一有效**的是给一小段"具体示范"（说一句、示例一句），且：
+ *   - 位置：人设与"当前场合"之后、动态内容（时间/天气/记忆）**之前** → 6/20
+ *     （放在最末尾只有 3/20；而且这个位置在稳定前缀里，不破坏 DeepSeek 前缀缓存）
+ *   - 用「开拓者」比用他本人的昵称有效得多：开拓者 6/18 vs 昵称 1/18
+ *     （"开拓者"是人设里写死的身份，模型认得；昵称只是配置里一个字符串）
+ *
+ * 只在**私聊 + 号主**时注入。群聊/陌生人绝不能出现这段——那里禁止叫开拓者。
+ */
+export function buildAddressDemo(names) {
+  const list = (Array.isArray(names) ? names : [names])
+    .map((n) => String(n ?? '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  if (!list.length) return '';
+  const name = list[0];
+  const alt = list.slice(1);
+  const line = (text) => (alt.length ? `\`${name}，${text}\` 或 \`${alt[0]}，${text}\`` : `\`${name}，${text}\``);
+  return [
+    `你平时是怎么叫他的（这是**说话习惯示范**，不是"你说过的话"）：`,
+    '你不会每句都叫他。多数时候直接说话，但**隔几轮就会很自然地在句首带上他的名字**。',
+    `- 他说他回来了：${line('回来啦')}`,
+    `- 他说想你：${line('我也在想你')}`,
+    `- 你主动跟他讲自己的事：${line('我刚把窗关上')}`,
+    `- 他要去睡了：${line('晚安')}`,
+    '- 他随口问一句（在干嘛 / 怎么了）：这种时候不叫，直接答就好，比如 `在看窗外`',
+    '名字放句首、就一两个词，不会让话变长。**不要每轮都叫**，隔几轮叫一次反而更有分量。',
+  ].join('\n');
+}
+
+/**
  * 构建人设 System Prompt。
  *
  * 两个来源，二选一：
@@ -87,7 +130,15 @@ export function isOwner(cfg, senderId) {
  */
 export function buildSystemPrompt(
   cfg,
-  { isGroup, groupId, isOwner: owner = false, environment = [], memories = '', selfTexts = [] } = {},
+  {
+    isGroup,
+    groupId,
+    isOwner: owner = false,
+    environment = [],
+    memories = '',
+    selfTexts = [],
+    addressNames = cfg?.persona?.addressNames,
+  } = {},
 ) {
   const p = cfg.persona;
   const filePersona = String(p.systemPromptText ?? '').trim();
@@ -136,6 +187,14 @@ export function buildSystemPrompt(
     for (const r of p.rules) lines.push(`- ${r}`);
   }
 
+  // 称呼示范。位置很讲究：必须在动态内容**之前**（真实 API 实测 6/20 vs 3/20），
+  // 同时这一段是静态的，落在前缀缓存区内，不会每条消息重算。
+  // 只给私聊 + 号主：群聊和陌生人那边人设明确禁止叫"开拓者"。
+  if (owner && !isGroup) {
+    const demo = buildAddressDemo(addressNames);
+    if (demo) lines.push('', demo);
+  }
+
   // ---- 动态内容从这里开始，必须排在人设之后（前缀缓存） ----
   if (Array.isArray(environment) && environment.length) {
     lines.push('', '你此刻的感知（真实信息，可以自然地说到）：');
@@ -165,6 +224,12 @@ export function buildSystemPrompt(
       '对方已经听过这些话了：**同一件事不要重复说、不要再答应一遍**，也不要和它们互相矛盾。' +
         '你如果确实还要接着讲同一件事，就往下讲新的内容，或者干脆换一件事说。' +
         '这些内容不要念出来、不要罗列、不要说"我刚才说过"。',
+      // 这条也是实测逼出来的：她某轮即兴编了一句"把你手账本上那张翻出来"，此后每一轮
+      // 这句话都会出现在上面这个清单里，她就当成"我说过，所以是真的"，再往下补细节补到
+      // "你在咖啡店被烫到舌头"。清单本身是中性的，不加这句就等于在给她背书。
+      '**注意：上面这些只是"你说过"，不代表它们就是真的发生过。** 如果其中某句话是你当时' +
+        '编出来的（不是对方说的，也不在上面"你记得关于对方的事"里），那它就不是事实——' +
+        '不要接着往下编，也不要再提它；对方追问就老实说记不太清了。',
     );
   }
 
